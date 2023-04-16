@@ -109,4 +109,5 @@ module.exports = {
   fetchGithubUsersData,
   fetchGithubUserDetails,
   fetchGithubUserRepos,
+  fetchData,
 };
