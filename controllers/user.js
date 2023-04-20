@@ -1,27 +1,15 @@
-const axios = require('axios');
 require('dotenv').config();
+const {
+  fetchData,
+  fetchAccessTokenData,
+  fetchAuthData,
+  postData,
+} = require('./baseFetch');
 
 const PORT = process.env.PORT || 5000;
-const BASE_URL = process.env.BASE_URL || 'https://api.github.com';
-const GITHUB_PERSONAL_TOKEN = process.env.GITHUB_PERSONAL_TOKEN || '';
-
-const fetchData = async (url) => {
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        Authorization: `token ${GITHUB_PERSONAL_TOKEN}`,
-      },
-    });
-
-    if (response.data === 'Not Found') {
-      return [];
-    }
-
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching data from ${url}: ${error.message}`);
-  }
-};
+const GITHUB_ACCESS_TOKEN_URL = process.env.GITHUB_ACCESS_TOKEN_URL;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 const fetchGithubUsersData = async (req, res) => {
   try {
@@ -30,8 +18,8 @@ const fetchGithubUsersData = async (req, res) => {
     const hostname = req.hostname;
 
     const dinamic_url = !per_page
-      ? `${BASE_URL}/users?since=${since}`
-      : `${BASE_URL}/users?since=${since}&per_page=${per_page}`;
+      ? `/users?since=${since}`
+      : `/users?since=${since}&per_page=${per_page}`;
 
     const data = await fetchData(dinamic_url);
 
@@ -69,7 +57,7 @@ const fetchGithubUsersData = async (req, res) => {
 const fetchGithubUserDetails = async (req, res) => {
   try {
     const username = req.params.username;
-    const data = await fetchData(`${BASE_URL}/users/${username}`);
+    const data = await fetchData(`/users/${username}`);
 
     if (!data || typeof data !== 'object') {
       res.status(500).json({ message: 'Invalid API response' });
@@ -91,7 +79,7 @@ const fetchGithubUserDetails = async (req, res) => {
 const fetchGithubUserRepos = async (req, res) => {
   try {
     const username = req.params.username;
-    const data = await fetchData(`${BASE_URL}/users/${username}/repos`);
+    const data = await fetchData(`/users/${username}/repos`);
 
     if (!data || typeof data !== 'object') {
       res.status(500).json({ message: 'Invalid API response' });
@@ -105,9 +93,46 @@ const fetchGithubUserRepos = async (req, res) => {
   }
 };
 
+const fetchUserAccessToken = async (req, res) => {
+  const code = req.query.code;
+
+  const data = await fetchAccessTokenData(
+    GITHUB_ACCESS_TOKEN_URL,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    code
+  );
+
+  res.json(data);
+};
+
+const fetchUserAuthInfo = async (req, res) => {
+  const access_token = req.query.access_token;
+
+  const data = await fetchAuthData('/user', access_token);
+
+  res.json(data);
+};
+
+const createNewUserRepository = async (req, res) => {
+  const access_token = req.query.access_token;
+  const body = {
+    name: req.body.name,
+    description: req.body.description,
+    private: req.body.private,
+  };
+
+  const data = await postData('/user/repos', access_token, body);
+
+  res.json(data);
+};
+
 module.exports = {
   fetchGithubUsersData,
   fetchGithubUserDetails,
   fetchGithubUserRepos,
   fetchData,
+  fetchUserAccessToken,
+  fetchUserAuthInfo,
+  createNewUserRepository,
 };
